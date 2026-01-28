@@ -10,3 +10,9 @@ In the docker build create a template to change the settings
 If build is successful trigger a terraform solution to deploy an infrastructure in ec2 and use cloudinit to deploy the docker file
 Ensure the main ec2 instance is in private subnet and a bastiono public subnet
 Complete assesment and terraform associate course
+
+
+dlete all
+
+docker rm $(docker ps -aq) && docker rmi $(docker images -aq)
+alias delete-all="docker rm $(docker ps -aq) && docker rmi $(docker images -aq)"
