@@ -27,5 +27,5 @@ variable "subnet_cider_public" {
 # variable "index_html" {
 #   description = "Index variable value"
 #   type = string
-  
+
 # }

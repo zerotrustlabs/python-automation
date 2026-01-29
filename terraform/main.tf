@@ -83,7 +83,7 @@ resource "aws_security_group" "public" {
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
-    ingress {
+  ingress {
     to_port     = 8080
     from_port   = 8080
     protocol    = "tcp"
@@ -117,34 +117,60 @@ data "aws_ami" "ubuntu" {
   }
 
 }
-resource "aws_instance" "ec2" {
-  count = 2
-  ami           = "ami-0f29c8402f8cce65c"
-  instance_type = "t2.micro"
-  subnet_id     = aws_subnet.public_subnet[count.index].id
-  #   instance_market_options {
-  #     market_type = "spot"
-  #     spot_options {
-  #       max_price = 0.0031
-  #     }
-  #   }
-  key_name        = aws_key_pair.deployer.key_name
-  # user_data       = base64encode(file("${path.module}/user_data/deploy.sh"))
-  user_data = base64encode(templatefile("${path.module}/user_data/deploy.sh",{
-    index_html = file("${path.module}/user_data/index.html")
-  }))
-  security_groups = [aws_security_group.public.id]
-  tags = {
-    environment = "dev"
-    route       = "public"
-  }
-  lifecycle {
-    create_before_destroy = true
-  }
-}
+# resource "aws_instance" "ec2" {
+#   count = 2
+#   ami           = "ami-0f29c8402f8cce65c"
+#   instance_type = "t2.micro"
+#   subnet_id     = aws_subnet.public_subnet[count.index].id
+#   key_name        = aws_key_pair.deployer.key_name
+#   # user_data       = base64encode(file("${path.module}/user_data/deploy.sh"))
+#   user_data = base64encode(templatefile("${path.module}/user_data/deploy.sh",{
+#     index_html = file("${path.module}/user_data/index.html")
+#   }))
+#   security_groups = [aws_security_group.public.id]
+#   tags = {
+#     environment = "dev"
+#     route       = "public"
+#   }
+#   lifecycle {
+#     create_before_destroy = true
+#   }
+# }
 
 
 resource "aws_key_pair" "deployer" {
   key_name   = "deployer-key"
   public_key = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQC9PjwY7Gq3fB8pcZvZ4Irs5JizL9BXBCykVhnWQvVr3ay5QmQKmcb5wwEcL7wyFn3COmVR3OBm9TDPva/E0PGYIrldnuugCCj4Nsdnek+/fl4tHqUQ0UVyKEI7lxhyoBBwm3pzfIuio6T1xSaxWgTF5zM6MUHZgoEdL6qS4mAFvJ37hu0TbJfAc4z2RF5Au9JOglClwjRNwGl2Gr27LzKpsmVnfw1idLn1xpmsEsFlJAIif0ifi4XAYvSvzXQvhYTNyh5jwjn+EE8XVPsKbTlkTYq7IbfY1eP1jNMLWdPfBxCW5GipqC+BBVo2RMJaJxGaJ6SUgX28n3lZ5XzNu2U+bRiUk1raYUT6jq98vDj2pNlW0ATMdeLZmZiqKhp9v76Xo/asYy4NjmjJjUkYh9Tkt8lVZQtQW3PRmSsTMLbCQWbhF08hT/X09nsiXFucTR3bv2mmY2BJHzm31tsGJD2OPuoAczQeN6CDH0075S1OOqZHYz1m40m7hyokrEUOjfKedgzIQiLV5p6OoB20yCiwa+J8n9KgIf73h6ltW0ZTeI2pgXvdeYLDEon3JhJh56q2pgVg+6h90ufu53XCu4vUO++ywRrHtExcPtg/YZmXWqJsj/JWli/FuL5FoGpM70ZHX+fLBdU8/FlWUduMEwCaULCatsT0sfM235s5cG4MAw== laborant@docker-01"
+}
+
+resource "aws_launch_template" "this" {
+  image_id      = "ami-0f29c8402f8cce65c"
+  instance_type = "t2.micro"
+  key_name      = aws_key_pair.deployer.key_name
+  vpc_security_group_ids = [aws_security_group.public.id]
+  user_data = base64encode(templatefile("${path.module}/user_data/deploy.sh", {
+    index_html = file("${path.module}/user_data/index.html")
+  }))
+  #  stat
+  tags = {
+    environment = "dev"
+    route       = "public"
+  }
+}
+
+resource "aws_autoscaling_group" "asg" {
+  vpc_zone_identifier = aws_subnet.public_subnet.*.id
+  # subnets = aws_subnet
+  desired_capacity          = 1
+  max_size                  = 1
+  min_size                  = 1
+  health_check_grace_period = 300
+  health_check_type         = "ELB"
+  force_delete              = true
+  target_group_arns         = [aws_lb_target_group.tg.arn]
+  launch_template {
+    id = aws_launch_template.this.id
+    version = "$Latest"
+  }
+  depends_on = [aws_launch_template.this]
 }
