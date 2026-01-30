@@ -28,4 +28,22 @@ variable "subnet_cider_public" {
 #   description = "Index variable value"
 #   type = string
 
-# }
+# }v
+variable "tags" {
+  description = "aws resource tags accross az's"
+  type        = map(string)
+  default = {
+    "name" = "test resource"
+    "dept" = "Engineering"
+    "tool" = "terraform"
+  }
+}
+
+
+variable "secrets"{
+  type = map(string)
+  default = {
+    username = "someone"
+    password = "password"
+  }
+}

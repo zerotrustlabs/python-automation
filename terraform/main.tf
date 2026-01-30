@@ -28,6 +28,16 @@ resource "aws_subnet" "private_subnet" {
 
 }
 
+
+resource "aws_db_subnet_group" "db" {
+  name       = "main"
+  subnet_ids = aws_subnet.private_subnet[*].id
+
+  tags = {
+    Name = "My DB subnet group"
+  }
+}
+
 resource "aws_subnet" "public_subnet" {
   # for_each = {for k,v in var.subnet_cider: k=>v}
   count                   = length(var.subnet_cider_public)
@@ -103,20 +113,20 @@ resource "aws_security_group" "public" {
 }
 
 
-data "aws_ami" "ubuntu" {
-  most_recent = true
+# data "aws_ami" "ubuntu" {
+#   most_recent = true
 
-  filter {
-    name   = "name"
-    values = ["ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*"]
-  }
+#   filter {
+#     name   = "name"
+#     values = ["ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*"]
+#   }
 
-  filter {
-    name   = "virtualization-type"
-    values = ["hvm"]
-  }
+#   filter {
+#     name   = "virtualization-type"
+#     values = ["hvm"]
+#   }
 
-}
+# }
 # resource "aws_instance" "ec2" {
 #   count = 2
 #   ami           = "ami-0f29c8402f8cce65c"
@@ -144,14 +154,14 @@ resource "aws_key_pair" "deployer" {
 }
 
 resource "aws_launch_template" "this" {
-  image_id      = "ami-0f29c8402f8cce65c"
-  instance_type = "t2.micro"
-  key_name      = aws_key_pair.deployer.key_name
+  image_id               = "ami-0f29c8402f8cce65c"
+  instance_type          = "t2.micro"
+  key_name               = aws_key_pair.deployer.key_name
   vpc_security_group_ids = [aws_security_group.public.id]
   user_data = base64encode(templatefile("${path.module}/user_data/deploy.sh", {
     index_html = file("${path.module}/user_data/index.html")
   }))
-  #  stat
+
   tags = {
     environment = "dev"
     route       = "public"
@@ -159,7 +169,7 @@ resource "aws_launch_template" "this" {
 }
 
 resource "aws_autoscaling_group" "asg" {
-  vpc_zone_identifier = aws_subnet.public_subnet.*.id
+  vpc_zone_identifier = aws_subnet.public_subnet[*].id
   # subnets = aws_subnet
   desired_capacity          = 1
   max_size                  = 1
@@ -169,7 +179,7 @@ resource "aws_autoscaling_group" "asg" {
   force_delete              = true
   target_group_arns         = [aws_lb_target_group.tg.arn]
   launch_template {
-    id = aws_launch_template.this.id
+    id      = aws_launch_template.this.id
     version = "$Latest"
   }
   depends_on = [aws_launch_template.this]

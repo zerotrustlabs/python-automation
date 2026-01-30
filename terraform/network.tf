@@ -34,7 +34,7 @@ resource "aws_security_group" "alb_sg" {
 resource "aws_lb_listener" "lst" {
   load_balancer_arn = aws_lb.this.arn
   protocol          = "HTTP"
-  port = "80"
+  port              = "80"
   # priority = 100
   default_action {
     type             = "forward"
@@ -42,10 +42,10 @@ resource "aws_lb_listener" "lst" {
   }
 }
 resource "aws_lb_target_group" "tg" {
-  vpc_id      = aws_vpc.this.id
+  vpc_id = aws_vpc.this.id
   # target_type = "instance"
-  port        = "8080"
-  protocol    = "HTTP"
+  port     = "8080"
+  protocol = "HTTP"
   health_check {
     protocol            = "HTTP"
     path                = "/"
